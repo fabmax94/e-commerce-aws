@@ -6,32 +6,38 @@ import {
 
 export async function handler(
   event: APIGatewayProxyEvent,
-  context: Context
+  context: Context,
 ): Promise<APIGatewayProxyResult> {
-  const method = event.httpMethod;
   const lambdaRequestId = context.awsRequestId;
   const apiRequestId = event.requestContext.requestId;
 
   console.log(`Request IDs ${lambdaRequestId} ${apiRequestId}`);
   if (event.resource === "/products") {
-    if (method === "GET") {
-      console.log("GET");
+    console.log("POST");
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        message: "POST Products - OK",
+      }),
+    };
+  } else if (event.resource === `/products/{id}`) {
+    if (event.httpMethod === "PUT") {
+      console.log("PUT");
 
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: "GET Products - OK",
+          message: "PUT Products - OK",
         }),
       };
-    }
-  } else if (event.resource === "PRODUCTS") {
-    if (method === "GET") {
-      console.log("GET");
+    } else if (event.httpMethod === "DELETE") {
+      console.log("DELETE");
 
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: `GET Products ${event.pathParameters} - OK`,
+          message: "PUT Products - OK",
         }),
       };
     }
