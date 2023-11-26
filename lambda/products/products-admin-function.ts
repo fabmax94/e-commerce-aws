@@ -3,6 +3,14 @@ import {
   APIGatewayProxyResult,
   Context,
 } from "aws-lambda";
+import * as process from "process";
+import { DynamoDB } from "aws-sdk";
+import { Product, ProductRepository } from "/opt/nodejs/productsLayer";
+import { v4 as uuid } from "uuid";
+
+const productsDb = process.env.PRODUCTS_DDB!;
+const dynamoDb = new DynamoDB.DocumentClient();
+const productRepository = new ProductRepository(dynamoDb, productsDb);
 
 export async function handler(
   event: APIGatewayProxyEvent,
@@ -12,19 +20,36 @@ export async function handler(
   const apiRequestId = event.requestContext.requestId;
 
   console.log(`Request IDs ${lambdaRequestId} ${apiRequestId}`);
-  if (event.resource === "/products") {
+  if (event.resource === "/products" && event.body) {
     console.log("POST");
-
+    const product = JSON.parse(event.body) as Product;
+    await productRepository.create({
+      ...product,
+      id: uuid()
+    });
     return {
-      statusCode: 200,
+      statusCode: 201,
       body: JSON.stringify({
-        message: "POST Products - OK",
+        message: "Created product",
       }),
     };
   } else if (event.resource === `/products/{id}`) {
-    if (event.httpMethod === "PUT") {
+    if (event.httpMethod === "PUT" && event.body) {
       console.log("PUT");
-
+      const product = JSON.parse(event.body) as Product;
+      try {
+        await productRepository.update({
+          ...product,
+          id: event.pathParameters!.id as string,
+        });
+      } catch(ConditionalCheckFailedException) {
+        return {
+          statusCode: 404,
+          body: JSON.stringify({
+            message: "Product not found",
+          }),
+        };
+      }
       return {
         statusCode: 200,
         body: JSON.stringify({
@@ -34,10 +59,12 @@ export async function handler(
     } else if (event.httpMethod === "DELETE") {
       console.log("DELETE");
 
+      await productRepository.delete(event.pathParameters!.id as string);
+
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: "PUT Products - OK",
+          message: "Deleted product",
         }),
       };
     }
