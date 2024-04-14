@@ -7,6 +7,9 @@ import * as process from "process";
 import { DynamoDB } from "aws-sdk";
 import { Product, ProductRepository } from "/opt/nodejs/productsLayer";
 import { v4 as uuid } from "uuid";
+import * as AWSXRay from "aws-xray-sdk";
+
+AWSXRay.captureAWS(require("aws-sdk"));
 
 const productsDb = process.env.PRODUCTS_DDB!;
 const dynamoDb = new DynamoDB.DocumentClient();
@@ -25,7 +28,7 @@ export async function handler(
     const product = JSON.parse(event.body) as Product;
     await productRepository.create({
       ...product,
-      id: uuid()
+      id: uuid(),
     });
     return {
       statusCode: 201,
@@ -42,7 +45,7 @@ export async function handler(
           ...product,
           id: event.pathParameters!.id as string,
         });
-      } catch(ConditionalCheckFailedException) {
+      } catch (ConditionalCheckFailedException) {
         return {
           statusCode: 404,
           body: JSON.stringify({
